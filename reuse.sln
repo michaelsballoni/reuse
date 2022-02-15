@@ -3,24 +3,30 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.32014.148
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "reuse", "reuse\reuse.vcxproj", "{BDEB1C77-7A8B-4EFA-B6F7-1E6AA27A2CF2}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "reuse-tests", "reuse-tests\reuse-tests.vcxproj", "{CCAC1FC7-237B-41A2-BA3E-DB1DE276E4C2}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
 		Debug|x64 = Debug|x64
 		Debug|x86 = Debug|x86
+		Release|Any CPU = Release|Any CPU
 		Release|x64 = Release|x64
 		Release|x86 = Release|x86
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{BDEB1C77-7A8B-4EFA-B6F7-1E6AA27A2CF2}.Debug|x64.ActiveCfg = Debug|x64
-		{BDEB1C77-7A8B-4EFA-B6F7-1E6AA27A2CF2}.Debug|x64.Build.0 = Debug|x64
-		{BDEB1C77-7A8B-4EFA-B6F7-1E6AA27A2CF2}.Debug|x86.ActiveCfg = Debug|Win32
-		{BDEB1C77-7A8B-4EFA-B6F7-1E6AA27A2CF2}.Debug|x86.Build.0 = Debug|Win32
-		{BDEB1C77-7A8B-4EFA-B6F7-1E6AA27A2CF2}.Release|x64.ActiveCfg = Release|x64
-		{BDEB1C77-7A8B-4EFA-B6F7-1E6AA27A2CF2}.Release|x64.Build.0 = Release|x64
-		{BDEB1C77-7A8B-4EFA-B6F7-1E6AA27A2CF2}.Release|x86.ActiveCfg = Release|Win32
-		{BDEB1C77-7A8B-4EFA-B6F7-1E6AA27A2CF2}.Release|x86.Build.0 = Release|Win32
+		{CCAC1FC7-237B-41A2-BA3E-DB1DE276E4C2}.Debug|Any CPU.ActiveCfg = Debug|x64
+		{CCAC1FC7-237B-41A2-BA3E-DB1DE276E4C2}.Debug|Any CPU.Build.0 = Debug|x64
+		{CCAC1FC7-237B-41A2-BA3E-DB1DE276E4C2}.Debug|x64.ActiveCfg = Debug|x64
+		{CCAC1FC7-237B-41A2-BA3E-DB1DE276E4C2}.Debug|x64.Build.0 = Debug|x64
+		{CCAC1FC7-237B-41A2-BA3E-DB1DE276E4C2}.Debug|x86.ActiveCfg = Debug|Win32
+		{CCAC1FC7-237B-41A2-BA3E-DB1DE276E4C2}.Debug|x86.Build.0 = Debug|Win32
+		{CCAC1FC7-237B-41A2-BA3E-DB1DE276E4C2}.Release|Any CPU.ActiveCfg = Release|x64
+		{CCAC1FC7-237B-41A2-BA3E-DB1DE276E4C2}.Release|Any CPU.Build.0 = Release|x64
+		{CCAC1FC7-237B-41A2-BA3E-DB1DE276E4C2}.Release|x64.ActiveCfg = Release|x64
+		{CCAC1FC7-237B-41A2-BA3E-DB1DE276E4C2}.Release|x64.Build.0 = Release|x64
+		{CCAC1FC7-237B-41A2-BA3E-DB1DE276E4C2}.Release|x86.ActiveCfg = Release|Win32
+		{CCAC1FC7-237B-41A2-BA3E-DB1DE276E4C2}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

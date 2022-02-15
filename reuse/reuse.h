@@ -4,6 +4,8 @@
 
 namespace reuse
 {
+	using namespace std::chrono_literals;
+
 	template <class T>
 	class reuse_manager
 	{
@@ -12,7 +14,7 @@ namespace reuse
 			: m_maxInventory(maxInventory)
 			, m_keepRunning(true)
 			, m_doneCleaning(false)
-			, m_cleanupThread([]() { cleanup(); })
+			, m_cleanupThread([&]() { cleanup(); })
 		{
 		}
 
@@ -27,12 +29,13 @@ namespace reuse
 				(
 					lock,
 					10ms,
-					[] { return m_doneCleaning; }
+					[&] { return m_doneCleaning; }
 				);
 			}
+			m_cleanupThread.join();
 		}
 
-		T* get(const wchar_t* initializer = nullptr) 
+		T* get(const wchar_t* initializer = nullptr)
 		{
 			if (m_keepRunning)
 			{
@@ -86,9 +89,9 @@ namespace reuse
 					std::unique_lock<std::mutex> lock(m_incomingMutex);
 					m_incomingCondition.wait_for
 					(
-						lock, 
-						10ms, 
-						[] { return !m_incoming.empty() || !m_keepRunning; }
+						lock,
+						10ms,
+						[&] { return !m_incoming.empty() || !m_keepRunning; }
 					);
 					if (!m_keepRunning || m_incoming.empty())
 						continue;
