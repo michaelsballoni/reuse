@@ -6,17 +6,35 @@ namespace reuse
 {
 	using namespace std::chrono_literals;
 
+	class reusable
+	{
+	public:
+		reusable(const wchar_t* initializer = nullptr)
+			: m_initializer(initializer == nullptr ? L"" : initializer)
+		{}
+
+		virtual ~reusable() {}
+
+		virtual bool cleanable() const { return false; }
+		virtual void clean() {}
+
+		const std::wstring& initializer() const { return m_initializer; }
+
+	private:
+		std::wstring m_initializer;
+	};
+
 	template <class T>
 	class reuse_manager
 	{
 	public:
-		reuse_manager(const size_t maxInventory)
+		reuse_manager(const size_t maxInventory, const size_t maxToClean)
 			: m_maxInventory(maxInventory)
+			, m_maxToClean(maxToClean)
 			, m_keepRunning(true)
 			, m_doneCleaning(false)
 			, m_cleanupThread([&]() { cleanup(); })
-		{
-		}
+		{}
 
 		~reuse_manager()
 		{
@@ -46,6 +64,8 @@ namespace reuse
 					return ret_val;
 				}
 			}
+			else
+				return nullptr;
 
 			return new T(initializer);
 		}
@@ -54,12 +74,28 @@ namespace reuse
 		{
 			if (m_keepRunning)
 			{
-				std::unique_lock<std::mutex> lock(m_incomingMutex);
-				m_incoming.push_front(t);
-				m_incomingCondition.notify_one();
+				if (t->cleanable())
+				{
+					std::unique_lock<std::mutex> lock(m_incomingMutex);
+					if (m_incoming.size() < m_maxToClean)
+					{
+						m_incoming.push_back(t);
+						m_incomingCondition.notify_one();
+						return;
+					}
+				}
+				else
+				{
+					std::unique_lock<std::mutex> lock(m_inventoryMutex);
+					if (m_inventory.size() < m_maxInventory)
+					{
+						m_inventory.push_back(t);
+						return;
+					}
+				}
 			}
-			else
-				delete t;
+
+			delete t;
 		}
 
 		void clear()
@@ -93,13 +129,14 @@ namespace reuse
 						10ms,
 						[&] { return !m_incoming.empty() || !m_keepRunning; }
 					);
-					if (!m_keepRunning || m_incoming.empty())
+					if (m_incoming.empty() || !m_keepRunning)
 						continue;
 
-					t = m_incoming.front();
-					m_incoming.pop_front();
+					t = m_incoming.back();
+					m_incoming.pop_back();
 				}
 
+				// we only get here if t is cleanable
 				t->clean();
 
 				bool should_delete = false;
@@ -118,11 +155,14 @@ namespace reuse
 		}
 
 	private:
+		const std::function<reusable* (const std::wstring&)> m_constructor;
+
 		const size_t m_maxInventory;
 		std::vector<T*> m_inventory;
 		std::mutex m_inventoryMutex;
 
-		std::forward_list<T*> m_incoming;
+		const size_t m_maxToClean;
+		std::vector<T*> m_incoming;
 		std::mutex m_incomingMutex;
 		std::condition_variable m_incomingCondition;
 
