@@ -1,7 +1,7 @@
 #include "pch.h"
 #include "CppUnitTest.h"
 
-#include "../reuse/use.h"
+#include "../reuse/reuse.h"
 
 #include <thread>
 
@@ -14,7 +14,7 @@ namespace reuse
 	class test_class : public reusable
 	{
 	public:
-		test_class(const wchar_t* initializer)
+		test_class(const std::wstring& initializer)
 			: init(initializer)
 		{
 			test_class_count.fetch_add(1);
@@ -26,11 +26,11 @@ namespace reuse
 			test_class_count.fetch_add(-1);
 		}
 
-		virtual bool cleanable() const { return true; }
 		virtual void clean()
 		{
 			data = "";
 		}
+		virtual bool cleanInBackground() const { return true; }
 
 		void process()
 		{
@@ -46,7 +46,7 @@ namespace reuse
 	public:
 		TEST_METHOD(TestReuse)
 		{
-			reuse_manager<test_class> mgr(1, 1);
+			pool<test_class> mgr(1, 1);
 			test_class* obj = nullptr;
 			{
 				use<test_class> use(mgr, L"init");

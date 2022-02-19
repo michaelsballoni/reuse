@@ -5,6 +5,8 @@ VisualStudioVersion = 17.0.32014.148
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "reuse-tests", "reuse-tests\reuse-tests.vcxproj", "{CCAC1FC7-237B-41A2-BA3E-DB1DE276E4C2}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "reuse-profile", "reuse-profile\reuse-profile.vcxproj", "{CF855639-10DC-4C85-BCE2-107F323408B3}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -27,6 +29,18 @@ Global
 		{CCAC1FC7-237B-41A2-BA3E-DB1DE276E4C2}.Release|x64.Build.0 = Release|x64
 		{CCAC1FC7-237B-41A2-BA3E-DB1DE276E4C2}.Release|x86.ActiveCfg = Release|Win32
 		{CCAC1FC7-237B-41A2-BA3E-DB1DE276E4C2}.Release|x86.Build.0 = Release|Win32
+		{CF855639-10DC-4C85-BCE2-107F323408B3}.Debug|Any CPU.ActiveCfg = Debug|x64
+		{CF855639-10DC-4C85-BCE2-107F323408B3}.Debug|Any CPU.Build.0 = Debug|x64
+		{CF855639-10DC-4C85-BCE2-107F323408B3}.Debug|x64.ActiveCfg = Debug|x64
+		{CF855639-10DC-4C85-BCE2-107F323408B3}.Debug|x64.Build.0 = Debug|x64
+		{CF855639-10DC-4C85-BCE2-107F323408B3}.Debug|x86.ActiveCfg = Debug|Win32
+		{CF855639-10DC-4C85-BCE2-107F323408B3}.Debug|x86.Build.0 = Debug|Win32
+		{CF855639-10DC-4C85-BCE2-107F323408B3}.Release|Any CPU.ActiveCfg = Release|x64
+		{CF855639-10DC-4C85-BCE2-107F323408B3}.Release|Any CPU.Build.0 = Release|x64
+		{CF855639-10DC-4C85-BCE2-107F323408B3}.Release|x64.ActiveCfg = Release|x64
+		{CF855639-10DC-4C85-BCE2-107F323408B3}.Release|x64.Build.0 = Release|x64
+		{CF855639-10DC-4C85-BCE2-107F323408B3}.Release|x86.ActiveCfg = Release|Win32
+		{CF855639-10DC-4C85-BCE2-107F323408B3}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
