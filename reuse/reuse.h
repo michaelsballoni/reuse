@@ -8,9 +8,6 @@ namespace reuse
 
 	/// <summary>
 	/// Implement reusable for the types you want to pool
-	/// This may appear polymorphic, but it is more of a contract than a base class
-	/// The pool machinery relies on the presence of the member functions of this class
-	/// All objects in a pool must have the same concrete type
 	/// </summary>
 	class reusable
 	{
@@ -19,13 +16,11 @@ namespace reuse
 		/// The initializer string, like a database connection string, is used to pool objects
 		/// of the same type but different initializers, allowing for different connection strings
 		/// Use of initializer strings is optional
-		/// The object pool guarantees that you only pay for what you use
 		/// </summary>
 		/// <param name="initializer">string passed to constructor of T by pool.get()</param>
 		reusable(const std::wstring& initializer = L"")
 			: m_initializer(initializer)
 		{}
-	private: // no really...
 		reusable(const reusable&) = delete;
 		reusable(reusable&&) = delete;
 		reusable& operator=(const reusable&) = delete;
@@ -59,17 +54,23 @@ namespace reuse
 	/// <summary>
 	/// A pool stores and hands out objects so that objects are not reallocated over and over
 	/// The class is templated so that it can new objects of the type with a given initializer
+	/// The class takes a constructor function, and T can be a base class, so you can
+	/// have the constructor function decide what concrete types to create based on initializers
 	/// </summary>
-	/// <typeparam name="T">The concrete object type to pool</typeparam>
+	/// <typeparam name="T">
+	/// The object type to pool
+	/// Can be a base class of a class library
+	/// </typeparam>
 	template <class T>
 	class pool
 	{
 	public:
 		/// <summary>
-		/// Declare a pool object for a concrete type with given object count limits
+		/// Declare a pool object for a type with given object count limits
 		/// </summary>
-		/// <param name="maxInventory">How many objects can the pool hold before objects put for recycling are dropped (deleted)</param>
-		/// <param name="maxToClean">How many objects can be in queue for cleaned before objects are dropped (deleted) </param>
+		/// <param name="constructor">What object should be created based on the initializer?</param>
+		/// <param name="maxInventory">How many objects can the pool hold before objects put for recycling are dropped (deleted)?</param>
+		/// <param name="maxToClean">How many objects can be in queue for cleaned before objects are dropped (deleted)?</param>
 		pool
 		(
 			const std::function<T* (const std::wstring&)> constructor, 
@@ -103,39 +104,67 @@ namespace reuse
 			}
 			m_cleanupThread.join();
 
-			clear();
+			// Free memory in the object buckets
+			{
+				std::unique_lock<std::mutex> lock(m_bucketMutex);
+
+				for (T* t : m_unBucket)
+					delete t;
+
+				for (const auto& initIt : m_initBuckets)
+				{
+					for (T* t : initIt.second)
+						delete t;
+				}
+			}
+
+			// Free memory in the incoming list
+			{
+				std::unique_lock<std::mutex> lock(m_incomingMutex);
+				for (T* t : m_incoming)
+					delete t;
+			}
 		}
 
+		/// <summary>
+		/// Get a reuse object to get an object from the pool
+		/// and automatically return it back to the pool
+		/// </summary>
+		/// <param name="initializer">Initializer for the object to return</param>
+		/// <returns>
+		/// An object for gaining access to a pooled object
+		/// </returns>
 		auto use(const std::wstring& initializer = L"")
 		{
-			return pool_use<T>(*this, initializer);
+			return reuse<T>(*this, initializer);
 		}
 
 		/// <summary>
 		/// What is the total count of objects in the pool?
-		/// This is the sum of the size of the null iniitalizer bucket, 
-		/// and the sizes of the initializer specific buckets
 		/// </summary>
 		size_t size() const
 		{
 			return size_t(m_size.load());
 		}
 
+	private:
 		/// <summary>
 		/// Get an object for a given initializer string
 		/// Objects are created using initializer strings, used, then put() and clean()'d
 		/// and handed back out
 		/// </summary>
-		/// <param name="initializer"></param>
-		/// <returns></returns>
-		T* get(const std::wstring& initializer = L"")
+		/// <param name="initializer">Initalizer for the object to return</param>
+		/// <returns>Pointer to a new or reused object</returns>
+		T* get(const std::wstring& initializer)
 		{
 			if (m_keepRunning)
 			{
 				std::unique_lock<std::mutex> lock(m_bucketMutex);
-				if (initializer.empty()) // consider using the "un" bucket
-				{						 // the one reserved for use cases with no initializer strings
-					if (!m_unBucket.empty()) // get an object from the un bucket
+
+				// Consider using the null bucket used with empty initializer strings
+				if (initializer.empty()) 
+				{
+					if (!m_unBucket.empty())
 					{
 						T* ret_val = m_unBucket.back();
 						m_unBucket.pop_back();
@@ -146,9 +175,10 @@ namespace reuse
 				else // we're using initializer strings
 				{
 					// Find the bucket for the initializer string
+					// See if a matching bucket exists and has objects to hand out
 					const auto& it = m_initBuckets.find(initializer);
-					if (it != m_initBuckets.end() && !it->second.empty()) // a matching bucket exists
-					{													 // and has objects to hand out
+					if (it != m_initBuckets.end() && !it->second.empty())
+					{ 
 						T* ret_val = it->second.back();
 						it->second.pop_back();
 						m_size.fetch_add(-1);
@@ -158,8 +188,8 @@ namespace reuse
 			}
 
 			// Failing all of that, including whether we should keep running,
-			// new up a new T object with the initializer string
-			return new T(initializer);
+			// construct a new T object with the initializer
+			return m_constructor(initializer);
 		}
 
 		/// <summary>
@@ -167,9 +197,6 @@ namespace reuse
 		/// </summary>
 		void put(T* t)
 		{
-			if (t == nullptr) // it can happen
-				return;
-
 			if (m_keepRunning)
 			{
 				if (t->cleanInBackground()) // queue up the object for background cleaning
@@ -182,23 +209,19 @@ namespace reuse
 						return;
 					}
 				}
-				else // clean up and add to the right bucket
+				else // clean up and directly add to the right bucket
 				{
 					t->clean();
 
-					std::unique_lock<std::mutex> lock(m_bucketMutex);
 					if (size() < m_maxInventory)
 					{
-						if (t->initializer().empty())
-						{
+						const std::wstring& initializer = t->initializer();
+						std::unique_lock<std::mutex> lock(m_bucketMutex);
+						if (initializer.empty())
 							m_unBucket.push_back(t);
-							m_size.fetch_add(1);
-						}
 						else
-						{
-							m_initBuckets[t->initializer()].push_back(t);
-							m_size.fetch_add(1);
-						}
+							m_initBuckets[initializer].push_back(t);
+						m_size.fetch_add(1);
 						return;
 					}
 				}
@@ -208,37 +231,6 @@ namespace reuse
 			delete t;
 		}
 
-		/// <summary>
-		/// Empty all buckets freeing all memory
-		/// </summary>
-		void clear()
-		{
-			{
-				std::unique_lock<std::mutex> lock(m_bucketMutex);
-				
-				for (T* t : m_unBucket)
-					delete t;
-				m_unBucket.clear();
-
-				for (const auto& initIt : m_initBuckets)
-				{
-					for (T* t : initIt.second)
-						delete t;
-				}
-				m_initBuckets.clear();
-			}
-
-			{
-				std::unique_lock<std::mutex> lock(m_incomingMutex);
-				for (T* t : m_incoming)
-					delete t;
-				m_incoming.clear();
-			}
-
-			m_size.store(0);
-		}
-
-	private:
 		/// <summary>
 		/// Thread routine for cleaning up objects in the background
 		/// </summary>
@@ -263,6 +255,7 @@ namespace reuse
 					m_incoming.pop_back();
 				}
 
+				// Clean it
 				t->clean();
 
 				// Add the object to the right pool...or plan on deleting it if too much inventory
@@ -288,20 +281,19 @@ namespace reuse
 
 	public:
 		/// <summary>
-		/// use is a RAII class for managing the lifetime of the use of a pooled object
-		/// and its recycling for later reuse
+		/// use is a RAII class for managing the lifetime of access to a pooled object
 		/// </summary>
 		template <class T>
-		class pool_use
+		class reuse
 		{
 		public:
 			/// <summary>
-			/// Declaring a use object allocates a T from the pool
-			/// When the use object goes out of scape, the object is returned to the pool
+			/// Declaring an instance of this class gets a T object from the pool
+			/// When this reuse object goes out of scape, the T object is returned to the pool
 			/// </summary>
 			/// <param name="pool">pool to get objects from and put objects back</param>
 			/// <param name="initializer">string to initialize the object</param>
-			pool_use(pool<T>& pool, const std::wstring& initializer = L"")
+			reuse(pool<T>& pool, const std::wstring& initializer = L"")
 				: m_pool(pool)
 				, m_t(nullptr)
 			{
@@ -309,7 +301,7 @@ namespace reuse
 			}
 
 			// Free the object back to the pool
-			~pool_use()
+			~reuse()
 			{
 				m_pool.put(m_t);
 				m_t = nullptr;
@@ -324,7 +316,6 @@ namespace reuse
 			pool<T>& m_pool;
 			T* m_t;
 		};
-
 
 	private:
 		const std::function<T* (const std::wstring&)> m_constructor;
