@@ -173,6 +173,8 @@
     <ClCompile Include="reuse-tests.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\reuse\includes.h" />
+    <ClInclude Include="..\reuse\reuse.h" />
     <ClInclude Include="pch.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

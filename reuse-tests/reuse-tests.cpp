@@ -46,10 +46,10 @@ namespace reuse
 	public:
 		TEST_METHOD(TestReuse)
 		{
-			pool<test_class> mgr(1, 1);
+			pool<test_class> pool([](const std::wstring& initializer) { return new test_class(initializer); }, 1, 1);
 			test_class* obj = nullptr;
 			{
-				use<test_class> use(mgr, L"init");
+				auto use = pool.use(L"init");
 				obj = &use.get();
 
 				Assert::AreEqual(std::string(), obj->data);
