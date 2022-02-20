@@ -18,17 +18,8 @@
     <ClCompile Include="reuse-tests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="pch.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="pch.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\reuse\includes.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="..\reuse\reuse.h">
       <Filter>Header Files</Filter>
     </ClInclude>
