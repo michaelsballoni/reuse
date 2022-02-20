@@ -74,8 +74,8 @@ namespace reuse
 		pool
 		(
 			const std::function<T* (const std::wstring&)> constructor, 
-			const size_t maxInventory, 
-			const size_t maxToClean
+			const size_t maxInventory = 1000U, 
+			const size_t maxToClean= 1000U
 		)
 			: m_constructor(constructor)
 			, m_maxInventory(maxInventory)
@@ -197,6 +197,9 @@ namespace reuse
 		/// </summary>
 		void put(T* t)
 		{
+			if (t == nullptr)
+				return;
+
 			if (m_keepRunning)
 			{
 				if (t->cleanInBackground()) // queue up the object for background cleaning
@@ -300,11 +303,25 @@ namespace reuse
 				m_t = m_pool.get(initializer);
 			}
 
+			/// <summary>
+			/// Move constructor to carry along the object pointer
+			/// without an unnecessary get() / put() pair of pool calls 
+			/// </summary>
+			reuse(reuse&& other)
+				: m_pool(other.m_pool)
+				, m_t(other.m_t)
+			{
+				other.m_t = nullptr;
+			}
+
 			// Free the object back to the pool
 			~reuse()
 			{
-				m_pool.put(m_t);
-				m_t = nullptr;
+				if (m_t != nullptr)
+				{
+					m_pool.put(m_t);
+					m_t = nullptr;
+				}
 			}
 
 			/// <summary>
