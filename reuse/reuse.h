@@ -53,7 +53,7 @@ namespace reuse
 		/// What is the intializer for this object?
 		/// This is used by the pool machinery to put objects into initializer-specific buckets
 		/// </summary>
-		const std::wstring& initializer() const { return m_initializer; }
+		virtual std::wstring initializer() const { return m_initializer; }
 
 	private:
 		std::wstring m_initializer;
@@ -147,14 +147,6 @@ namespace reuse
 			return reuse<T>(*this, initializer);
 		}
 
-		/// <summary>
-		/// What is the total count of objects in the pool?
-		/// </summary>
-		size_t size() const
-		{
-			return size_t(m_size.load());
-		}
-
 	private:
 		/// <summary>
 		/// Get an object for a given initializer string
@@ -224,9 +216,9 @@ namespace reuse
 				{
 					t->clean();
 
-					if (size() < m_maxInventory)
+					if (m_size.load() < m_maxInventory)
 					{
-						const std::wstring& initializer = t->initializer();
+						std::wstring initializer = t->initializer();
 						std::unique_lock<std::mutex> lock(m_bucketMutex);
 						if (initializer.empty())
 							m_unBucket.push_back(t);
@@ -266,27 +258,27 @@ namespace reuse
 					m_incoming.pop_back();
 				}
 
+				// Delete the object if our shelves are full
+				if (m_size.load() >= m_maxInventory)
+				{
+					delete t;
+					continue;
+				}
+
 				// Clean it
 				t->clean();
 
-				// Add the object to the right pool...or plan on deleting it if too much inventory
-				// NOTE: Don't delete inside the mutex
-				bool should_delete = false;
-				{
-					std::unique_lock<std::mutex> lock(m_bucketMutex);
-					if (size() >= m_maxInventory)
-						should_delete = true;
-					else if (t->initializer().empty())
-						m_unBucket.push_back(t);
-					else
-						m_initBuckets[t->initializer()].push_back(t);
-				}
-
-				if (should_delete)
-					delete t;
+				// Add the object to the right pool
+				std::wstring initializer = t->initializer();
+				std::unique_lock<std::mutex> lock(m_bucketMutex);
+				if (initializer.empty())
+					m_unBucket.push_back(t);
 				else
-					m_size.fetch_add(1);
+					m_initBuckets[initializer].push_back(t);
+				m_size.fetch_add(1);
 			}
+
+			// All done.
 			m_doneCleaning = true;
 		}
 
@@ -306,7 +298,6 @@ namespace reuse
 			/// <param name="initializer">string to initialize the object</param>
 			reuse(pool<T>& pool, const std::wstring& initializer = L"")
 				: m_pool(pool)
-				, m_t(nullptr)
 			{
 				m_t = m_pool.get(initializer);
 			}
@@ -325,11 +316,7 @@ namespace reuse
 			// Free the object back to the pool
 			~reuse()
 			{
-				if (m_t != nullptr)
-				{
-					m_pool.put(m_t);
-					m_t = nullptr;
-				}
+				m_pool.put(m_t);
 			}
 
 			/// <summary>
